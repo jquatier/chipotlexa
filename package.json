@@ -1,0 +1,31 @@
+{
+  "name": "chipotlexa",
+  "version": "0.0.1",
+  "description": "An Alexa skill for the Amazon Echo for placing a Chipotle online order.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "zip": "zip -r -X build.zip . -x *.zip"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jquatier/chipotlexa.git"
+  },
+  "keywords": [
+    "chipsandguac",
+    "chipotle",
+    "alexa",
+    "echo",
+    "burrito"
+  ],
+  "author": "JQ",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/jquatier/chipotlexa/issues"
+  },
+  "homepage": "https://github.com/jquatier/chipotlexa#readme",
+  "dependencies": {
+    "alexa-sdk": "^1.0.3",
+    "chipsandguac": "^1.1.1"
+  }
+}
