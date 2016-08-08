@@ -1,5 +1,7 @@
 # chipotlexa
 
+![](img/chipotlexa.jpg)
+
 An Alexa skill for the Amazon Echo for placing a Chipotle online order.
 
 ## Usage
