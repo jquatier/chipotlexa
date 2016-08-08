@@ -1,13 +1,50 @@
 const Alexa = require('alexa-sdk');
 const ChipsAndGuac = require('chipsandguac');
+const profile = require('./profile.json');
 
-var states = {
+const states = {
   LAUNCH: '_LAUNCH',
-  START_ORDER: '_START_ORDER'
+  LIST_ORDERS: '_LIST_ORDERS'
+};
+
+function getChipsAndGuac(attributes) {
+  if (attributes.cag) {
+    return attributes.cag;
+  }
+  console.log('creating new CaG', profile);
+  attributes.cag = new ChipsAndGuac(profile);
+  return attributes.cag;
+}
+
+function getCachedOrders(attributes) {
+  if (attributes.ordersCache) {
+    return Promise.resolve(attributes.ordersCache);
+  } else {
+    console.log('fetching orders');
+    return getChipsAndGuac(attributes).getOrders().then(function(orders) {
+      attributes.ordersCache = orders;
+      return Promise.resolve(orders);
+    });
+  }
+}
+
+function buildOrderDetailsResponse(order) {
+  var response = '';
+  order.items.forEach(function(item, index) {
+    if (index > 0) {
+      response += ', and, ';
+    }
+    response += item.name.replace(' x ', ' ');
+    if (item.details) {
+      response += ' with ' + item.details;
+    }
+  });
+  return response;
 }
 
 const handlers = {
   'LaunchRequest': function() {
+    console.log('launch');
     this.handler.state = states.LAUNCH;
     this.emitWithState('Launch', true);
   }
@@ -25,10 +62,9 @@ const launchHandlers = Alexa.CreateStateHandler(states.LAUNCH, {
   },
 
   'AMAZON.YesIntent': function() {
-    this.attributes['orderIndex'] = 0;
-    this.handler.state = states.START_ORDER;
-    this.emit(':tell', 'Great!');
-    // look up orders, etc
+    this.attributes.orderIndex = 0;
+    this.handler.state = states.LIST_ORDERS;
+    this.emitWithState('ListOrders', true);
   },
 
   'AMAZON.NoIntent': function() {
@@ -45,8 +81,39 @@ const launchHandlers = Alexa.CreateStateHandler(states.LAUNCH, {
   }
 });
 
+const ordersHandlers = Alexa.CreateStateHandler(states.LIST_ORDERS, {
+  'ListOrders': function() {
+    console.log('listing orders', this.attributes.orderIndex);
+    getCachedOrders(this.attributes).then((orders) => {
+      console.log(orders);
+      const orderDetails = buildOrderDetailsResponse(orders[this.attributes.orderIndex]);
+      let message = (this.attributes.orderIndex === 0) ?
+        `last time you got ${orderDetails}.` : `another order you placed was ${orderDetails}.`;
+      message += ' Would you like to order this again?';
+      this.emit(':ask', 'Ok, ' + message, message);
+    }).catch((error) => {
+      console.log(error);
+      this.emitWithState('Error', true);
+    });
+  },
+
+  'AMAZON.YesIntent': function() {
+    this.emit(':tell', 'great!');
+  },
+
+  'AMAZON.NoIntent': function() {
+    this.attributes.orderIndex++;
+    this.emitWithState('ListOrders', true);
+  },
+
+  'Unhandled': function() {
+    const message = 'Say yes to place this order, or no to choose a different order.';
+    this.emit(':ask', message, message);
+  }
+});
+
 exports.handler = (event, context, callback) => {
   const alexa = Alexa.handler(event, context);
-  alexa.registerHandlers(handlers, launchHandlers);
+  alexa.registerHandlers(handlers, launchHandlers, ordersHandlers);
   alexa.execute();
 };
