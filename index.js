@@ -42,9 +42,16 @@ function buildOrderDetailsResponse(order) {
 
 const handlers = {
   'LaunchRequest': function() {
-    console.log('launch');
+    console.log('launch request');
     this.handler.state = states.LAUNCH;
     this.emitWithState('Launch', true);
+  },
+
+  'PlaceOrderIntent': function() {
+    console.log('place order request');
+    this.attributes.orderIndex = 0;
+    this.handler.state = states.LIST_ORDERS;
+    this.emitWithState('ListOrders', true);
   }
 };
 
