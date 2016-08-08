@@ -4,7 +4,8 @@ const profile = require('./profile.json');
 
 const states = {
   LAUNCH: '_LAUNCH',
-  LIST_ORDERS: '_LIST_ORDERS'
+  LIST_ORDERS: '_LIST_ORDERS',
+  CONFIRM_ORDER: '_CONFIRM_ORDER'
 };
 
 function getChipsAndGuac(attributes) {
@@ -21,10 +22,7 @@ function getCachedOrders(attributes) {
     return Promise.resolve(attributes.ordersCache);
   } else {
     console.log('fetching orders');
-    return getChipsAndGuac(attributes).getOrders().then(function(orders) {
-      attributes.ordersCache = orders;
-      return Promise.resolve(orders);
-    });
+    return getChipsAndGuac(attributes).getOrders();
   }
 }
 
@@ -86,8 +84,9 @@ const ordersHandlers = Alexa.CreateStateHandler(states.LIST_ORDERS, {
     console.log('listing orders', this.attributes.orderIndex);
     getCachedOrders(this.attributes).then((orders) => {
       console.log(orders);
+      this.attributes.ordersCache = orders;
       const orderDetails = buildOrderDetailsResponse(orders[this.attributes.orderIndex]);
-      let message = (this.attributes.orderIndex === 0) ?
+      var message = (this.attributes.orderIndex === 0) ?
         `last time you got ${orderDetails}.` : `another order you placed was ${orderDetails}.`;
       message += ' Would you like to order this again?';
       this.emit(':ask', 'Ok, ' + message, message);
@@ -98,7 +97,8 @@ const ordersHandlers = Alexa.CreateStateHandler(states.LIST_ORDERS, {
   },
 
   'AMAZON.YesIntent': function() {
-    this.emit(':tell', 'great!');
+    this.handler.state = states.CONFIRM_ORDER;
+    this.emitWithState('Confirm', true);
   },
 
   'AMAZON.NoIntent': function() {
@@ -112,8 +112,15 @@ const ordersHandlers = Alexa.CreateStateHandler(states.LIST_ORDERS, {
   }
 });
 
+const confirmHandlers = Alexa.CreateStateHandler(states.CONFIRM_ORDER, {
+  'Confirm': function() {
+    // add place order logic
+    this.emit(':tell', this.attributes.orderIndex);
+  }
+});
+
 exports.handler = (event, context, callback) => {
   const alexa = Alexa.handler(event, context);
-  alexa.registerHandlers(handlers, launchHandlers, ordersHandlers);
+  alexa.registerHandlers(handlers, launchHandlers, ordersHandlers, confirmHandlers);
   alexa.execute();
 };
