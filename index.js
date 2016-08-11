@@ -5,16 +5,13 @@ const profile = require('./profile.json');
 const states = {
   LAUNCH: '_LAUNCH',
   LIST_ORDERS: '_LIST_ORDERS',
-  CONFIRM_ORDER: '_CONFIRM_ORDER'
+  PLACE_ORDER: '_PLACE_ORDER'
 };
 
+var cag = undefined;
+
 function getChipsAndGuac(attributes) {
-  if (attributes.cag) {
-    return attributes.cag;
-  }
-  console.log('creating new CaG', profile);
-  attributes.cag = new ChipsAndGuac(profile);
-  return attributes.cag;
+  return cag || new ChipsAndGuac(profile);
 }
 
 function getCachedOrders(attributes) {
@@ -92,6 +89,7 @@ const ordersHandlers = Alexa.CreateStateHandler(states.LIST_ORDERS, {
     getCachedOrders(this.attributes).then((orders) => {
       console.log(orders);
       this.attributes.ordersCache = orders;
+      this.attributes.selectedOrderId = orders[this.attributes.orderIndex].id;
       const orderDetails = buildOrderDetailsResponse(orders[this.attributes.orderIndex]);
       var message = (this.attributes.orderIndex === 0) ?
         `last time you got ${orderDetails}.` : `another order you placed was ${orderDetails}.`;
@@ -104,8 +102,8 @@ const ordersHandlers = Alexa.CreateStateHandler(states.LIST_ORDERS, {
   },
 
   'AMAZON.YesIntent': function() {
-    this.handler.state = states.CONFIRM_ORDER;
-    this.emitWithState('Confirm', true);
+    this.handler.state = states.PLACE_ORDER;
+    this.emitWithState('Review', true);
   },
 
   'AMAZON.NoIntent': function() {
@@ -119,15 +117,38 @@ const ordersHandlers = Alexa.CreateStateHandler(states.LIST_ORDERS, {
   }
 });
 
-const confirmHandlers = Alexa.CreateStateHandler(states.CONFIRM_ORDER, {
-  'Confirm': function() {
-    // add place order logic
-    this.emit(':tell', this.attributes.orderIndex);
+const placeOrderHandlers = Alexa.CreateStateHandler(states.PLACE_ORDER, {
+  'Review': function() {
+    console.log('review', this.attributes.selectedOrderId);
+    const cag = getChipsAndGuac(this.attributes);
+    console.log(cag);
+    cag.submitPreviousOrderWithId(this.attributes.selectedOrderId, true).then((orderDetails) => {
+      const message = `Your order will be ready at ${orderDetails.pickupTimes[0]}` +
+        '. To place this order, please say confirm.';
+      this.emit(':ask', 'Ok, ' + message, message);
+    }).catch((e) => {
+      console.log(e);
+      if(e.message.indexOf('closed') > 0) {
+        this.emit(':tell', 'Sorry, it looks like Chipotle is currently closed, try again later.');
+      } else {
+        this.emitWithState('Error', true);
+      }
+    });
+  },
+
+  'ConfirmIntent': function() {
+    this.emit(':tell', 'Order Confirmed.');
+    // actually place order.
+  },
+
+  'Unhandled': function() {
+    const message = 'Say confirm to place this order, or exit to cancel this order.';
+    this.emit(':ask', message, message);
   }
 });
 
 exports.handler = (event, context, callback) => {
   const alexa = Alexa.handler(event, context);
-  alexa.registerHandlers(handlers, launchHandlers, ordersHandlers, confirmHandlers);
+  alexa.registerHandlers(handlers, launchHandlers, ordersHandlers, placeOrderHandlers);
   alexa.execute();
 };
