@@ -29,11 +29,14 @@ function buildOrderDetailsResponse(order) {
     if (index > 0) {
       response += ', and, ';
     }
-    response += item.name.replace(' x ', ' ');
+    response += item.name.replace(' x ', ' ')
+      .replace(' & ', ' and ')
+      .replace(/\s*\(.*?\)\s*/g, '');
     if (item.details) {
       response += ' with ' + item.details;
     }
   });
+  console.log(response);
   return response;
 }
 
@@ -121,7 +124,6 @@ const placeOrderHandlers = Alexa.CreateStateHandler(states.PLACE_ORDER, {
   'Review': function() {
     console.log('review', this.attributes.selectedOrderId);
     const cag = getChipsAndGuac(this.attributes);
-    console.log(cag);
     cag.submitPreviousOrderWithId(this.attributes.selectedOrderId, true).then((orderDetails) => {
       const message = `Your order will be ready at ${orderDetails.pickupTimes[0]}` +
         '. To place this order, please say confirm.';
@@ -137,8 +139,27 @@ const placeOrderHandlers = Alexa.CreateStateHandler(states.PLACE_ORDER, {
   },
 
   'ConfirmIntent': function() {
-    this.emit(':tell', 'Order Confirmed.');
-    // actually place order.
+    console.log('confirm', this.attributes.selectedOrderId);
+    const cag = getChipsAndGuac(this.attributes);
+    cag.submitPreviousOrderWithId(this.attributes.selectedOrderId, profile.previewMode || false).then((orderDetails) => {
+      var message;
+      if(profile.previewMode) {
+        message = `Preview mode is enabled. Your order would have been ready at ${orderDetails.pickupTimes[0]}` +
+          ` at the location on ${orderDetails.location}` +
+          '. If everything worked, you can disable preview mode for next time.';
+      } else {
+        message = `Your order will be ready at ${orderDetails.pickupTime}` +
+          ` at the location on ${orderDetails.location}. Enjoy your meal!`;
+      }
+      this.emit(':tell', 'Ok, ' + message, message);
+    }).catch((e) => {
+      console.log(e);
+      if(e.message.indexOf('closed') > 0) {
+        this.emit(':tell', 'Sorry, it looks like Chipotle is currently closed, try again later.');
+      } else {
+        this.emitWithState('Error', true);
+      }
+    });
   },
 
   'Unhandled': function() {
