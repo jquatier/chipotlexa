@@ -12,7 +12,11 @@ Alexa: _"Ok, It looks like last time you ordered a chicken burrito bowl... Would
 
 You: _"Yes."_
 
-WORK IN PROGRESS.
+Alexa: _"Your order will be ready at 7:30 PM. To place this order, please say confirm."_
+
+You: _"Confirm."_
+
+Alexa: _"Your order will be ready at 7:30 PM at the location on 5699 S. Broadway. Enjoy your meal!"_
 
 
 ###### Disclaimer

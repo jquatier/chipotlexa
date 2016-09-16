@@ -4,6 +4,9 @@
       "intent": "PlaceOrderIntent"
     },
     {
+      "intent": "ConfirmIntent"
+    },
+    {
       "intent": "AMAZON.StartOverIntent"
     },
     {

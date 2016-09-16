@@ -125,7 +125,7 @@ const placeOrderHandlers = Alexa.CreateStateHandler(states.PLACE_ORDER, {
     console.log('review', this.attributes.selectedOrderId);
     const cag = getChipsAndGuac(this.attributes);
     cag.submitPreviousOrderWithId(this.attributes.selectedOrderId, true).then((orderDetails) => {
-      const message = `Your order will be ready at ${orderDetails.pickupTimes[0]}` +
+      const message = `Your order will be ready on ${orderDetails.pickupTimes[0]}` +
         '. To place this order, please say confirm.';
       this.emit(':ask', 'Ok, ' + message, message);
     }).catch((e) => {
@@ -144,14 +144,14 @@ const placeOrderHandlers = Alexa.CreateStateHandler(states.PLACE_ORDER, {
     cag.submitPreviousOrderWithId(this.attributes.selectedOrderId, profile.previewMode || false).then((orderDetails) => {
       var message;
       if(profile.previewMode) {
-        message = `Preview mode is enabled. Your order would have been ready at ${orderDetails.pickupTimes[0]}` +
+        message = `Preview mode is enabled. Your order would have been ready on ${orderDetails.pickupTimes[0]}` +
           ` at the location on ${orderDetails.location}` +
-          '. If everything worked, you can disable preview mode for next time.';
+          '. If everything worked, you can disable preview mode for next time to place a real order.';
       } else {
-        message = `Your order will be ready at ${orderDetails.pickupTime}` +
+        message = `Ok, Your order will be ready on ${orderDetails.pickupTime}` +
           ` at the location on ${orderDetails.location}. Enjoy your meal!`;
       }
-      this.emit(':tell', 'Ok, ' + message, message);
+      this.emit(':tell', message);
     }).catch((e) => {
       console.log(e);
       if(e.message.indexOf('closed') > 0) {
